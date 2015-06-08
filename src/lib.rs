@@ -5,7 +5,7 @@
 //! ```
 //! use byteio::{LittleEndian, ReadBytesExt};
 //! let mut reader = &[1, 2][..];
-//! let val: u16 = reader.read::<LittleEndian>().unwrap();
+//! let val: u16 = reader.read_as::<LittleEndian>().unwrap();
 //! assert_eq!(val, 513u16);
 //! ```
 
@@ -139,16 +139,17 @@ impl_byte_order!(BigEndian, to_be);
 
 /// Extension trait for `io::Read` that allows to read `T`s from it.
 pub trait ReadBytesExt<T> {
-    fn read<B: ByteIo<T>>(&mut self) -> io::Result<T>;
+    fn read_as<B: ByteIo<T>>(&mut self) -> io::Result<T>;
 }
+
 /// Extension trait for `io::Write` that allows to write `T`s from it.
 pub trait WriteBytesExt<T> {
-    fn write<B: ByteIo<T>>(&mut self, n: T) -> io::Result<()>;
+    fn write_as<B: ByteIo<T>>(&mut self, n: T) -> io::Result<()>;
 }
 
 impl<T, R: io::Read> ReadBytesExt<T> for R {
     #[inline]
-    fn read<B: ByteIo<T>>(&mut self) -> io::Result<T> {
+    fn read_as<B: ByteIo<T>>(&mut self) -> io::Result<T> {
         let mut buf = B::buffer();
         if try!(self.read(buf.as_mut())) != buf.as_ref().len() {
             return Err(io::Error::new(
@@ -162,7 +163,7 @@ impl<T, R: io::Read> ReadBytesExt<T> for R {
 
 impl<T, W: io::Write> WriteBytesExt<T> for W {
     #[inline]
-    fn write<B: ByteIo<T>>(&mut self, n: T) -> io::Result<()> {
+    fn write_as<B: ByteIo<T>>(&mut self, n: T) -> io::Result<()> {
         let buf = B::into_bytes(n);
         self.write_all(buf.as_ref())
     }

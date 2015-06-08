@@ -12,7 +12,7 @@ fn bench_byteio_vec(b: &mut test::Bencher) {
     b.iter(|| {
         let data = black_box(&vec[..]);
         for mut val in data.chunks(2) {
-            let _: Result<u16, _> = black_box(val.read::<byteio::LittleEndian>());
+            let _: Result<u16, _> = black_box(val.read_as::<byteio::LittleEndian>());
         }
     });
     b.bytes = vec.len() as u64;
