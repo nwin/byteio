@@ -3,10 +3,12 @@
 //!
 //! ## Usage
 //! ```
-//! use byteio::{LittleEndian, ReadBytesExt};
-//! let mut reader = &[1, 2][..];
-//! let val: u16 = reader.read_as::<LittleEndian>().unwrap();
-//! assert_eq!(val, 513u16);
+//! use byteio::{BigEndian, LittleEndian, ReadBytesExt};
+//! let data = vec![1, 2];
+//! let val: u16 = (&data[..]).read_as::<LittleEndian>().unwrap();
+//! assert_eq!(val, 513);
+//! let val: u16 = (&data[..]).read_as::<BigEndian>().unwrap();
+//! assert_eq!(val, 258);
 //! ```
 
 use std::io;
@@ -23,7 +25,7 @@ impl<T, V> AsSlice<T> for V where V: AsRef<[T]> + AsMut<[T]> {}
 /// ## Note 
 /// This should not be used to convert big types to byte arrays as it will
 /// overflow the stack.
-pub trait ByteIo<T> {
+pub trait ByteOrder<T> {
     /// Conversion buffer type.
     ///
     /// Should be big enough to hold a T.
@@ -62,7 +64,7 @@ pub type NativeByteOrder = BigEndian;
 
 macro_rules! impl_byte_order {
     ($val:ident, $bytes:expr, $byte_order:ident, $convert:ident) => {
-        impl ByteIo<$val> for $byte_order {
+        impl ByteOrder<$val> for $byte_order {
             type Buffer = [u8; $bytes];
     
             #[inline]
@@ -92,13 +94,12 @@ macro_rules! impl_byte_order {
         impl_byte_order!(i32, 4, $byte_order, $convert);
         impl_byte_order!(i64, 8, $byte_order, $convert);
         
-        impl ByteIo<f32> for $byte_order {
+        impl ByteOrder<f32> for $byte_order {
             type Buffer = [u8; 4];
     
             #[inline]
             fn from_bytes(buf: Self::Buffer) -> f32 {
                 unsafe { ::std::mem::transmute::<_, u32>(buf) }.$convert() as f32
-                
             }
             
             #[inline]
@@ -112,7 +113,7 @@ macro_rules! impl_byte_order {
             }
         }
         
-        impl ByteIo<f64> for $byte_order {
+        impl ByteOrder<f64> for $byte_order {
             type Buffer = [u8; 8];
     
             #[inline]
@@ -139,17 +140,16 @@ impl_byte_order!(BigEndian, to_be);
 
 /// Extension trait for `io::Read` that allows to read `T`s from it.
 pub trait ReadBytesExt<T> {
-    fn read_as<B: ByteIo<T>>(&mut self) -> io::Result<T>;
+    fn read_as<B: ByteOrder<T>>(&mut self) -> io::Result<T>;
 }
-
 /// Extension trait for `io::Write` that allows to write `T`s from it.
 pub trait WriteBytesExt<T> {
-    fn write_as<B: ByteIo<T>>(&mut self, n: T) -> io::Result<()>;
+    fn write_as<B: ByteOrder<T>>(&mut self, n: T) -> io::Result<()>;
 }
 
 impl<T, R: io::Read> ReadBytesExt<T> for R {
     #[inline]
-    fn read_as<B: ByteIo<T>>(&mut self) -> io::Result<T> {
+    fn read_as<B: ByteOrder<T>>(&mut self) -> io::Result<T> {
         let mut buf = B::buffer();
         if try!(self.read(buf.as_mut())) != buf.as_ref().len() {
             return Err(io::Error::new(
@@ -163,7 +163,7 @@ impl<T, R: io::Read> ReadBytesExt<T> for R {
 
 impl<T, W: io::Write> WriteBytesExt<T> for W {
     #[inline]
-    fn write_as<B: ByteIo<T>>(&mut self, n: T) -> io::Result<()> {
+    fn write_as<B: ByteOrder<T>>(&mut self, n: T) -> io::Result<()> {
         let buf = B::into_bytes(n);
         self.write_all(buf.as_ref())
     }
