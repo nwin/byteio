@@ -12,6 +12,7 @@
 //! ```
 
 use std::io;
+use std::mem;
 
 /// Type that can easily be converted to a (mutable) reference to a slice.
 ///
@@ -69,13 +70,13 @@ macro_rules! impl_byte_order {
     
             #[inline]
             fn from_bytes(buf: Self::Buffer) -> $val {
-                unsafe { ::std::mem::transmute::<_, $val>(buf) }.$convert()
+                unsafe { mem::transmute::<_, $val>(buf) }.$convert()
                 
             }
             
             #[inline]
             fn into_bytes(n: $val) -> Self::Buffer {
-                unsafe { ::std::mem::transmute(n.$convert()) }
+                unsafe { mem::transmute(n.$convert()) }
             }
             
             #[inline]
@@ -99,12 +100,16 @@ macro_rules! impl_byte_order {
     
             #[inline]
             fn from_bytes(buf: Self::Buffer) -> f32 {
-                unsafe { ::std::mem::transmute::<_, u32>(buf) }.$convert() as f32
+                unsafe {
+                    mem::transmute(mem::transmute::<_, u32>(buf).$convert())
+                }
             }
             
             #[inline]
             fn into_bytes(n: f32) -> Self::Buffer {
-                unsafe { ::std::mem::transmute((n as u32).$convert()) }
+                unsafe { 
+                    mem::transmute(mem::transmute::<_, u32>(n).$convert())
+                }
             }
             
             #[inline]
@@ -118,13 +123,16 @@ macro_rules! impl_byte_order {
     
             #[inline]
             fn from_bytes(buf: Self::Buffer) -> f64 {
-                unsafe { ::std::mem::transmute::<_, u64>(buf) }.$convert() as f64
-                
+                unsafe {
+                    mem::transmute(mem::transmute::<_, u64>(buf).$convert())
+                }
             }
             
             #[inline]
             fn into_bytes(n: f64) -> Self::Buffer {
-                unsafe { ::std::mem::transmute((n as u64).$convert()) }
+                unsafe { 
+                    mem::transmute(mem::transmute::<_, u64>(n).$convert())
+                }
             }
             
             #[inline]
